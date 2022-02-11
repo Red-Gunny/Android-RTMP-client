@@ -17,4 +17,59 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0" />
 
+    <EditText
+        android:id="@+id/et_rtp_url"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:inputType="textUri"
+        android:minHeight="48dp"
+        android:textColor="@color/black"
+        android:textColorHint="@color/black"
+        app:layout_constraintBottom_toTopOf="@+id/b_record"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:ignore="SpeakableTextPresentCheck" />
+
+    <Button
+        android:id="@+id/b_start_stop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="start"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.476"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/cameraView"
+        app:layout_constraintVertical_bias="0.159" />
+
+    <Button
+        android:id="@+id/b_record"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="b_record"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.466"
+        app:layout_constraintStart_toStartOf="@+id/cameraView"
+        app:layout_constraintTop_toBottomOf="@+id/b_start_stop"
+        app:layout_constraintVertical_bias="0.256" />
+
+    <Button
+        android:id="@+id/switch_camera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="switch_camera"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.466"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/b_record"
+        app:layout_constraintVertical_bias="0.453" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

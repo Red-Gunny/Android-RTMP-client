@@ -6,21 +6,30 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.example.myapplication2.utils.PathUtils;
+import com.pedro.encoder.input.video.CameraOpenException;
 import com.pedro.rtmp.utils.ConnectCheckerRtmp;
 import com.pedro.rtplibrary.rtmp.RtmpCamera1;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements ConnectCheckerRtmp, SurfaceHolder.Callback {
+public class MainActivity extends AppCompatActivity
+        implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback {
 
     private RtmpCamera1 rtmpCamera1;
+    private Button button;
+    private Button bRecord;
+    private EditText etUrl;
 
     private String currentDateAndTime = "";
     private File folder;
@@ -30,22 +39,33 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // 전체로 가져오는
         setContentView(R.layout.activity_main);
-
         folder = PathUtils.getRecordPath();
-
         SurfaceView surfaceView = findViewById(R.id.cameraView);
+
+        button = findViewById(R.id.b_start_stop);
+        button.setOnClickListener(this);
+
+        bRecord = findViewById(R.id.b_record);
+        bRecord.setOnClickListener(this);
+
+        Button switchCamera = findViewById(R.id.switch_camera);
+        switchCamera.setOnClickListener(this);
+
+        etUrl = findViewById(R.id.et_rtp_url);
+        etUrl.setHint(R.string.hint_rtmp);
+
         rtmpCamera1 = new RtmpCamera1(surfaceView, this);
         rtmpCamera1.setReTries(10);
         surfaceView.getHolder().addCallback(this);
     }
 
-    @Override
+    /**@Override
     protected void onStart() {
         super.onStart();
         if(!rtmpCamera1.isStreaming()) {
             // rtmpCamera1.isRecording() -> 아래 조건문에 이게 들어갔음
             if(rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
-                rtmpCamera1.startStream("");
+                rtmpCamera1.startStream("rtmp://ec2-3-35-143-20.ap-northeast-2.compute.amazonaws.com:1935");
             }
             else {
                 Toast.makeText(this, "Error preparing stream, This device cant do it", Toast.LENGTH_SHORT).show();
@@ -59,7 +79,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
         if(rtmpCamera1.isStreaming()) {
             rtmpCamera1.stopStream();
         }
-    }
+    }**/
 
     /** ConnectCheckerRtmp를 온전히 상속 받기 위한 메소드 (0) **/
     @Override
@@ -93,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
                 } else {
                     Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT).show();
                     rtmpCamera1.stopStream();
-                    //button.setText(R.string.start_button);      // 버튼의 텍스트 변경하는건데
+                    button.setText(R.string.start_button);      // 버튼의 텍스트 변경하는건데
                 }
             }
         });
@@ -132,6 +152,84 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
         });
     }
 
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.b_start_stop:
+                if (!rtmpCamera1.isStreaming()) {
+                    if (rtmpCamera1.isRecording()
+                            || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
+                        button.setText(R.string.stop_button);
+                        rtmpCamera1.startStream(etUrl.getText().toString());
+                    } else {
+                        Toast.makeText(this, "Error preparing stream, This device cant do it",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    button.setText(R.string.start_button);
+                    rtmpCamera1.stopStream();
+                }
+                break;
+            case R.id.switch_camera:
+                try {
+                    rtmpCamera1.switchCamera();
+                } catch (CameraOpenException e) {
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case R.id.b_record:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                    if (!rtmpCamera1.isRecording()) {
+                        try {
+                            if (!folder.exists()) {
+                                folder.mkdir();
+                            }
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+                            currentDateAndTime = sdf.format(new Date());
+                            if (!rtmpCamera1.isStreaming()) {
+                                if (rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
+                                    rtmpCamera1.startRecord(
+                                            folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                                    bRecord.setText(R.string.stop_record);
+                                    Toast.makeText(this, "Recording... ", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(this, "Error preparing stream, This device cant do it",
+                                            Toast.LENGTH_SHORT).show();
+                                }
+                            } else {
+                                rtmpCamera1.startRecord(
+                                        folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                                bRecord.setText(R.string.stop_record);
+                                Toast.makeText(this, "Recording... ", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (IOException e) {
+                            rtmpCamera1.stopRecord();
+                            PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                            bRecord.setText(R.string.start_record);
+                            Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        rtmpCamera1.stopRecord();
+                        PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                        bRecord.setText(R.string.start_record);
+                        Toast.makeText(this,
+                                "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
+                                Toast.LENGTH_SHORT).show();
+                        currentDateAndTime = "";
+                    }
+                } else {
+                    Toast.makeText(this, "You need min JELLY_BEAN_MR2(API 18) for do it...",
+                            Toast.LENGTH_SHORT).show();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+
+
     /** SurfaceHolder.Callback을 온전히 상속받기 위한 메소드 (1) **/
     /** SurfaceHolder를 사용하기 위함 **/
     @Override
@@ -160,7 +258,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
             /** 영상 파일을 기록 **/
             PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
 
-            //bRecord.setText(R.string.start_record); // 이건 버튼 문구 변경시키는거
+            bRecord.setText(R.string.start_record); // 이건 버튼 문구 변경시키는거
 
             /** 밑에 안내 문구 출력 **/
             Toast.makeText(this, "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(), Toast.LENGTH_SHORT).show();
@@ -172,7 +270,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
         if (rtmpCamera1.isStreaming()) {
             /** stopStream **/
             rtmpCamera1.stopStream();
-            //button.setText(getResources().getString(R.string.start_button));  // 버튼 문구 변경시키는..?
+            button.setText(getResources().getString(R.string.start_button));  // 버튼 문구 변경시키는..?
         }
         rtmpCamera1.stopPreview();      // 프리뷰 종료
     }
